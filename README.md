@@ -123,7 +123,7 @@ The program has undergone multiple audits and tests, demonstrating strong profit
 
 Discord: `@mikek_1999`
 
-Support this project: `HJHBJREtPxsdxiEXhik4VQyVbSyV4GScLPGuwWStqeSP`
+- If this program is helpful to you, please click the sponsor button to give your love!
 
 ## DISCLAIMER
 
