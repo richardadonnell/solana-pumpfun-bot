@@ -1,0 +1,32 @@
+{"level":30,"time":1746931503288,"msg":"Wallet Address: Ae4KqvdveTt9D4xBYzbZWNwnaQayXrmX8XWv3CBfC5th"}
+{"level":30,"time":1746931503288,"msg":"Snipe list: false"}
+{"level":30,"time":1746931503288,"msg":"Check mint renounced: true"}
+{"level":30,"time":1746931503289,"msg":"Min pool size: 1.000000000 SOL"}
+{"level":30,"time":1746931503289,"msg":"Buy amount: 0.100000000 SOL"}
+{"level":30,"time":1746931503289,"msg":"Auto sell: true"}
+{"level":30,"time":1746931503584,"msg":"Listening for wallet changes: 2"}
+{"level":30,"time":1746931503584,"msg":"Listening for raydium changes: 0"}
+{"level":30,"time":1746931503584,"msg":"Listening for open book changes: 1"}
+{"level":30,"time":1746931748800,"msg":"Wallet Address: Ae4KqvdveTt9D4xBYzbZWNwnaQayXrmX8XWv3CBfC5th"}
+{"level":30,"time":1746931748801,"msg":"Snipe list: false"}
+{"level":30,"time":1746931748801,"msg":"Check mint renounced: true"}
+{"level":30,"time":1746931748802,"msg":"Min pool size: 1.000000000 SOL"}
+{"level":30,"time":1746931748802,"msg":"Buy amount: 0.100000000 SOL"}
+{"level":30,"time":1746931748802,"msg":"Auto sell: true"}
+{"level":30,"time":1746931749117,"msg":"Listening for wallet changes: 2"}
+{"level":30,"time":1746931749117,"msg":"Listening for raydium changes: 0"}
+{"level":30,"time":1746931749117,"msg":"Listening for open book changes: 1"}
+{"level":30,"time":1746932077319,"msg":"Wallet Address: Ae4KqvdveTt9D4xBYzbZWNwnaQayXrmX8XWv3CBfC5th"}
+{"level":30,"time":1746932077319,"msg":"Snipe list: false"}
+{"level":30,"time":1746932077319,"msg":"Check mint renounced: true"}
+{"level":30,"time":1746932077320,"msg":"Min pool size: 1.000000000 SOL"}
+{"level":30,"time":1746932077320,"msg":"Buy amount: 0.100000000 SOL"}
+{"level":30,"time":1746932077320,"msg":"Auto sell: true"}
+{"level":30,"time":1746932077673,"msg":"Listening for wallet changes: 2"}
+{"level":30,"time":1746932077673,"msg":"Listening for raydium changes: 0"}
+{"level":30,"time":1746932077673,"msg":"Listening for open book changes: 1"}
+{"level":30,"time":1746932246367,"mint":"J4VUwHEVLyNBBPaDYbWRz4mhTKrYSniBX9JGLuhsm1ao","signature":"25GvLeg5QtjBDr944eUsXBEQ9xp7gGE7viGEnTReVfktFhwZzNNBjnwHkcr82FBRZumeu5fE63PbfTz4PEV7jDfE","msg":"Sent buy tx"}
+{"level":30,"time":1746932259346,"signature":"25GvLeg5QtjBDr944eUsXBEQ9xp7gGE7viGEnTReVfktFhwZzNNBjnwHkcr82FBRZumeu5fE63PbfTz4PEV7jDfE","url":"https://solscan.io/tx/25GvLeg5QtjBDr944eUsXBEQ9xp7gGE7viGEnTReVfktFhwZzNNBjnwHkcr82FBRZumeu5fE63PbfTz4PEV7jDfE?cluster=mainnet-beta","dex":"https://dexscreener.com/solana/J4VUwHEVLyNBBPaDYbWRz4mhTKrYSniBX9JGLuhsm1ao?maker=Ae4KqvdveTt9D4xBYzbZWNwnaQayXrmX8XWv3CBfC5th","msg":"Confirmed buy tx... Bought at: 1.533658071803533e-7 SOL"}
+{"level":30,"time":1746932311064,"_bn":"fd7b9fde18682cc509ea6b54964de87a0293a07b636e11bb9a914d80d5f6fa28","msg":"Current Price: 1.587e-7 SOL"}
+{"level":30,"time":1746932311517,"mint":"J4VUwHEVLyNBBPaDYbWRz4mhTKrYSniBX9JGLuhsm1ao","signature":"3uSb7kSLB9SN2VqdrZoGgEeJzPUMc76DYcZ4kyDC2Y7oYagGtHBw7XbR3JCXKRcSHYSuhkqqjeVoSPqitS2hinBa","msg":"Sent sell tx"}
+{"level":30,"time":1746932325162,"mint":"J4VUwHEVLyNBBPaDYbWRz4mhTKrYSniBX9JGLuhsm1ao","signature":"3uSb7kSLB9SN2VqdrZoGgEeJzPUMc76DYcZ4kyDC2Y7oYagGtHBw7XbR3JCXKRcSHYSuhkqqjeVoSPqitS2hinBa","url":"https://solscan.io/tx/3uSb7kSLB9SN2VqdrZoGgEeJzPUMc76DYcZ4kyDC2Y7oYagGtHBw7XbR3JCXKRcSHYSuhkqqjeVoSPqitS2hinBa?cluster=mainnet-beta","dex":"https://dexscreener.com/solana/J4VUwHEVLyNBBPaDYbWRz4mhTKrYSniBX9JGLuhsm1ao?maker=Ae4KqvdveTt9D4xBYzbZWNwnaQayXrmX8XWv3CBfC5th","msg":"Confirmed sell tx... Sold at: 1.587e-7\tNet Profit: 3.478084794594312%"}

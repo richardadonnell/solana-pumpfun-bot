@@ -8,48 +8,55 @@ import {
   MarketStateV3,
   Token,
   TokenAmount,
-} from '@raydium-io/raydium-sdk';
+} from "@raydium-io/raydium-sdk";
 import {
   AccountLayout,
   createAssociatedTokenAccountIdempotentInstruction,
   createCloseAccountInstruction,
   getAssociatedTokenAddressSync,
   TOKEN_PROGRAM_ID,
-} from '@solana/spl-token';
+} from "@solana/spl-token";
 import {
-  Keypair,
-  Connection,
-  PublicKey,
+  Commitment,
   ComputeBudgetProgram,
+  Connection,
   KeyedAccountInfo,
+  Keypair,
+  PublicKey,
   TransactionMessage,
   VersionedTransaction,
-  Commitment,
-} from '@solana/web3.js';
-import { getTokenAccounts, RAYDIUM_LIQUIDITY_PROGRAM_ID_V4, OPENBOOK_PROGRAM_ID, createPoolKeys } from './liquidity';
-import { retry } from './utils';
-import { keypairEncryption } from './utils';
-import { retrieveEnvVariable, retrieveTokenValueByAddress} from './utils';
-import { getMinimalMarketV3, MinimalMarketLayoutV3 } from './market';
-import { MintLayout } from './types';
-import pino from 'pino';
-import bs58 from 'bs58';
-import * as fs from 'fs';
-import * as path from 'path';
+} from "@solana/web3.js";
+import bs58 from "bs58";
+import * as fs from "fs";
+import * as path from "path";
+import pino from "pino"; // Restoring pino import
+import {
+  createPoolKeys,
+  getTokenAccounts,
+  OPENBOOK_PROGRAM_ID,
+  RAYDIUM_LIQUIDITY_PROGRAM_ID_V4,
+} from "./liquidity";
+import { getMinimalMarketV3, MinimalMarketLayoutV3 } from "./market";
+import { MintLayout } from "./types";
+import {
+  retrieveEnvVariable,
+  retrieveTokenValueByAddress,
+  retry,
+} from "./utils";
 
+// Restoring original pino logger
 const transport = pino.transport({
   targets: [
-    // {
-    //   level: 'trace',
-    //   target: 'pino/file',
-    //   options: {
-    //     destination: 'buy.log',
-    //   },
-    // },
-
     {
-      level: 'trace',
-      target: 'pino-pretty',
+      level: "trace",
+      target: "pino/file",
+      options: {
+        destination: "buy.log",
+      },
+    },
+    {
+      level: "trace",
+      target: "pino-pretty",
       options: {},
     },
   ],
@@ -57,8 +64,8 @@ const transport = pino.transport({
 
 export const logger = pino(
   {
-    level: 'trace',
-    redact: ['poolKeys'],
+    level: "trace",
+    redact: ["poolKeys"],
     serializers: {
       error: pino.stdSerializers.err,
     },
@@ -67,9 +74,12 @@ export const logger = pino(
   transport,
 );
 
-const network = 'mainnet-beta';
-const RPC_ENDPOINT = retrieveEnvVariable('RPC_ENDPOINT', logger);
-const RPC_WEBSOCKET_ENDPOINT = retrieveEnvVariable('RPC_WEBSOCKET_ENDPOINT', logger);
+const network = "mainnet-beta";
+const RPC_ENDPOINT = retrieveEnvVariable("RPC_ENDPOINT", logger);
+const RPC_WEBSOCKET_ENDPOINT = retrieveEnvVariable(
+  "RPC_WEBSOCKET_ENDPOINT",
+  logger,
+);
 
 const solanaConnection = new Connection(RPC_ENDPOINT, {
   wsEndpoint: RPC_WEBSOCKET_ENDPOINT,
@@ -85,87 +95,123 @@ export type MinimalTokenAccountData = {
 
 let existingLiquidityPools: Set<string> = new Set<string>();
 let existingOpenBookMarkets: Set<string> = new Set<string>();
-let existingTokenAccounts: Map<string, MinimalTokenAccountData> = new Map<string, MinimalTokenAccountData>();
+let existingTokenAccounts: Map<string, MinimalTokenAccountData> = new Map<
+  string,
+  MinimalTokenAccountData
+>();
 
 let wallet: Keypair;
 let quoteToken: Token;
 let quoteTokenAssociatedAddress: PublicKey;
 let quoteAmount: TokenAmount;
 let quoteMinPoolSizeAmount: TokenAmount;
-let commitment: Commitment = retrieveEnvVariable('COMMITMENT_LEVEL', logger) as Commitment;
+let commitment: Commitment = retrieveEnvVariable(
+  "COMMITMENT_LEVEL",
+  logger,
+) as Commitment;
 
-const TAKE_PROFIT = Number(retrieveEnvVariable('TAKE_PROFIT', logger));
-const STOP_LOSS = Number(retrieveEnvVariable('STOP_LOSS', logger));
-const CHECK_IF_MINT_IS_RENOUNCED = retrieveEnvVariable('CHECK_IF_MINT_IS_RENOUNCED', logger) === 'true';
-const USE_SNIPE_LIST = retrieveEnvVariable('USE_SNIPE_LIST', logger) === 'true';
-const SNIPE_LIST_REFRESH_INTERVAL = Number(retrieveEnvVariable('SNIPE_LIST_REFRESH_INTERVAL', logger));
-const AUTO_SELL = retrieveEnvVariable('AUTO_SELL', logger) === 'true';
-const MAX_SELL_RETRIES = Number(retrieveEnvVariable('MAX_SELL_RETRIES', logger));
-const MIN_POOL_SIZE = retrieveEnvVariable('MIN_POOL_SIZE', logger);
+const TAKE_PROFIT = Number(retrieveEnvVariable("TAKE_PROFIT", logger));
+const STOP_LOSS = Number(retrieveEnvVariable("STOP_LOSS", logger));
+const CHECK_IF_MINT_IS_RENOUNCED =
+  retrieveEnvVariable("CHECK_IF_MINT_IS_RENOUNCED", logger) === "true";
+const USE_SNIPE_LIST = retrieveEnvVariable("USE_SNIPE_LIST", logger) === "true";
+const SNIPE_LIST_REFRESH_INTERVAL = Number(
+  retrieveEnvVariable("SNIPE_LIST_REFRESH_INTERVAL", logger),
+);
+const AUTO_SELL = retrieveEnvVariable("AUTO_SELL", logger) === "true";
+const MAX_SELL_RETRIES = Number(
+  retrieveEnvVariable("MAX_SELL_RETRIES", logger),
+);
+const MIN_POOL_SIZE = retrieveEnvVariable("MIN_POOL_SIZE", logger);
 
 let snipeList: string[] = [];
 
 async function init(): Promise<void> {
+  // console.log("init() called"); // Can remove this
   // get wallet
-  await keypairEncryption();
-  const PRIVATE_KEY = retrieveEnvVariable('PRIVATE_KEY', logger);
+  // await keypairEncryption(); // REMOVE THIS CALL
+  // console.log("keypairEncryption() completed"); // REMOVE THIS LOG
+  const PRIVATE_KEY = retrieveEnvVariable("PRIVATE_KEY", logger);
   wallet = Keypair.fromSecretKey(bs58.decode(PRIVATE_KEY));
   logger.info(`Wallet Address: ${wallet.publicKey}`);
+  // console.log("Wallet initialized"); // Can remove this
 
   // get quote mint and amount
-  const QUOTE_MINT = retrieveEnvVariable('QUOTE_MINT', logger);
-  const QUOTE_AMOUNT = retrieveEnvVariable('QUOTE_AMOUNT', logger);
+  const QUOTE_MINT = retrieveEnvVariable("QUOTE_MINT", logger);
+  // console.log(`QUOTE_MINT: ${QUOTE_MINT}`); // Can remove this
+  const QUOTE_AMOUNT = retrieveEnvVariable("QUOTE_AMOUNT", logger);
+  // console.log(`QUOTE_AMOUNT: ${QUOTE_AMOUNT}`); // Can remove this
   switch (QUOTE_MINT) {
-    case 'WSOL': {
+    case "WSOL": {
       quoteToken = Token.WSOL;
       quoteAmount = new TokenAmount(Token.WSOL, QUOTE_AMOUNT, false);
-      quoteMinPoolSizeAmount = new TokenAmount(quoteToken, MIN_POOL_SIZE, false);
+      quoteMinPoolSizeAmount = new TokenAmount(
+        quoteToken,
+        MIN_POOL_SIZE,
+        false,
+      );
       break;
     }
-    case 'USDC': {
+    case "USDC": {
       quoteToken = new Token(
         TOKEN_PROGRAM_ID,
-        new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
+        new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"),
         6,
-        'USDC',
-        'USDC',
+        "USDC",
+        "USDC",
       );
       quoteAmount = new TokenAmount(quoteToken, QUOTE_AMOUNT, false);
       break;
     }
     default: {
-      throw new Error(`Unsupported quote mint "${QUOTE_MINT}". Supported values are USDC and WSOL`);
+      throw new Error(
+        `Unsupported quote mint "${QUOTE_MINT}". Supported values are USDC and WSOL`,
+      );
     }
   }
 
   logger.info(`Snipe list: ${USE_SNIPE_LIST}`);
   logger.info(`Check mint renounced: ${CHECK_IF_MINT_IS_RENOUNCED}`);
   logger.info(
-    `Min pool size: ${quoteMinPoolSizeAmount.isZero() ? 'false' : quoteMinPoolSizeAmount.toFixed()} ${quoteToken.symbol}`,
+    `Min pool size: ${quoteMinPoolSizeAmount.isZero() ? "false" : quoteMinPoolSizeAmount.toFixed()} ${quoteToken.symbol}`,
   );
   logger.info(`Buy amount: ${quoteAmount.toFixed()} ${quoteToken.symbol}`);
   logger.info(`Auto sell: ${AUTO_SELL}`);
+  // console.log("Quote token and amounts configured");
 
-  // check existing wallet for associated token account of quote mint
-  const tokenAccounts = await getTokenAccounts(solanaConnection, wallet.publicKey, commitment);
+  // console.log("Fetching token accounts...");
+  const tokenAccounts = await getTokenAccounts(
+    solanaConnection,
+    wallet.publicKey,
+    commitment,
+  );
+  // console.log(`Found ${tokenAccounts.length} token accounts`);
 
   for (const ta of tokenAccounts) {
-    existingTokenAccounts.set(ta.accountInfo.mint.toString(), <MinimalTokenAccountData>{
+    existingTokenAccounts.set(ta.accountInfo.mint.toString(), <
+      MinimalTokenAccountData
+    >{
       mint: ta.accountInfo.mint,
       address: ta.pubkey,
     });
   }
 
-  const tokenAccount = tokenAccounts.find((acc) => acc.accountInfo.mint.toString() === quoteToken.mint.toString())!;
+  const tokenAccount = tokenAccounts.find(
+    (acc) => acc.accountInfo.mint.toString() === quoteToken.mint.toString(),
+  )!;
 
   if (!tokenAccount) {
-    throw new Error(`No ${quoteToken.symbol} token account found in wallet: ${wallet.publicKey}`);
+    throw new Error(
+      `No ${quoteToken.symbol} token account found in wallet: ${wallet.publicKey}`,
+    );
   }
 
   quoteTokenAssociatedAddress = tokenAccount.pubkey;
-
+  // console.log("Quote token associated address found");
   // load tokens to snipe
   loadSnipeList();
+  // console.log("Snipe list loaded if enabled");
+  // console.log("init() completed successfully"); // Can remove this
 }
 
 function saveTokenAccount(mint: PublicKey, accountData: MinimalMarketLayoutV3) {
@@ -183,7 +229,10 @@ function saveTokenAccount(mint: PublicKey, accountData: MinimalMarketLayoutV3) {
   return tokenAccount;
 }
 
-export async function processRaydiumPool(id: PublicKey, poolState: LiquidityStateV4) {
+export async function processRaydiumPool(
+  id: PublicKey,
+  poolState: LiquidityStateV4,
+) {
   if (!shouldBuy(poolState.baseMint.toString())) {
     return;
   }
@@ -192,7 +241,10 @@ export async function processRaydiumPool(id: PublicKey, poolState: LiquidityStat
     const mintOption = await checkMintable(poolState.baseMint);
 
     if (mintOption !== true) {
-      logger.warn({ mint: poolState.baseMint }, 'Skipping, owner can mint tokens!');
+      logger.warn(
+        { mint: poolState.baseMint },
+        "Skipping, owner can mint tokens!",
+      );
       return;
     }
   }
@@ -200,7 +252,9 @@ export async function processRaydiumPool(id: PublicKey, poolState: LiquidityStat
   await buy(id, poolState);
 }
 
-export async function checkMintable(vault: PublicKey): Promise<boolean | undefined> {
+export async function checkMintable(
+  vault: PublicKey,
+): Promise<boolean | undefined> {
   try {
     let { data } = (await solanaConnection.getAccountInfo(vault)) || {};
     if (!data) {
@@ -214,10 +268,14 @@ export async function checkMintable(vault: PublicKey): Promise<boolean | undefin
   }
 }
 
-export async function processOpenBookMarket(updatedAccountInfo: KeyedAccountInfo) {
+export async function processOpenBookMarket(
+  updatedAccountInfo: KeyedAccountInfo,
+) {
   let accountData: MarketStateV3 | undefined;
   try {
-    accountData = MARKET_STATE_LAYOUT_V3.decode(updatedAccountInfo.accountInfo.data);
+    accountData = MARKET_STATE_LAYOUT_V3.decode(
+      updatedAccountInfo.accountInfo.data,
+    );
 
     // to be competitive, we collect market data before buying the token...
     if (existingTokenAccounts.has(accountData.baseMint.toString())) {
@@ -231,17 +289,30 @@ export async function processOpenBookMarket(updatedAccountInfo: KeyedAccountInfo
   }
 }
 
-async function buy(accountId: PublicKey, accountData: LiquidityStateV4): Promise<void> {
+async function buy(
+  accountId: PublicKey,
+  accountData: LiquidityStateV4,
+): Promise<void> {
   try {
-    let tokenAccount = existingTokenAccounts.get(accountData.baseMint.toString());
+    let tokenAccount = existingTokenAccounts.get(
+      accountData.baseMint.toString(),
+    );
 
     if (!tokenAccount) {
       // it's possible that we didn't have time to fetch open book data
-      const market = await getMinimalMarketV3(solanaConnection, accountData.marketId, commitment);
+      const market = await getMinimalMarketV3(
+        solanaConnection,
+        accountData.marketId,
+        commitment,
+      );
       tokenAccount = saveTokenAccount(accountData.baseMint, market);
     }
 
-    tokenAccount.poolKeys = createPoolKeys(accountId, accountData, tokenAccount.market!);
+    tokenAccount.poolKeys = createPoolKeys(
+      accountId,
+      accountData,
+      tokenAccount.market!,
+    );
     const { innerTransaction } = Liquidity.makeSwapFixedInInstruction(
       {
         poolKeys: tokenAccount.poolKeys,
@@ -278,12 +349,12 @@ async function buy(accountId: PublicKey, accountData: LiquidityStateV4): Promise
     transaction.sign([wallet, ...innerTransaction.signers]);
     const rawTransaction = transaction.serialize();
     const signature = await retry(
-    () =>
-      solanaConnection.sendRawTransaction(rawTransaction, {
-        skipPreflight: true,
-      }),
-    { retryIntervalMs: 10, retries: 50 }, // TODO handle retries more efficiently
-  );
+      () =>
+        solanaConnection.sendRawTransaction(rawTransaction, {
+          skipPreflight: true,
+        }),
+      { retryIntervalMs: 10, retries: 50 }, // TODO handle retries more efficiently
+    );
     logger.info({ mint: accountData.baseMint, signature }, `Sent buy tx`);
     const confirmation = await solanaConnection.confirmTransaction(
       {
@@ -293,8 +364,14 @@ async function buy(accountId: PublicKey, accountData: LiquidityStateV4): Promise
       },
       commitment,
     );
-    const basePromise = solanaConnection.getTokenAccountBalance(accountData.baseVault, commitment);
-    const quotePromise = solanaConnection.getTokenAccountBalance(accountData.quoteVault, commitment);
+    const basePromise = solanaConnection.getTokenAccountBalance(
+      accountData.baseVault,
+      commitment,
+    );
+    const quotePromise = solanaConnection.getTokenAccountBalance(
+      accountData.quoteVault,
+      commitment,
+    );
 
     await Promise.all([basePromise, quotePromise]);
 
@@ -302,7 +379,8 @@ async function buy(accountId: PublicKey, accountData: LiquidityStateV4): Promise
     const quoteValue = await quotePromise;
 
     if (baseValue?.value?.uiAmount && quoteValue?.value?.uiAmount)
-      tokenAccount.buyValue = quoteValue?.value?.uiAmount / baseValue?.value?.uiAmount;
+      tokenAccount.buyValue =
+        quoteValue?.value?.uiAmount / baseValue?.value?.uiAmount;
     if (!confirmation.value.err) {
       logger.info(
         {
@@ -314,7 +392,10 @@ async function buy(accountId: PublicKey, accountData: LiquidityStateV4): Promise
       );
     } else {
       logger.debug(confirmation.value.err);
-      logger.info({ mint: accountData.baseMint, signature }, `Error confirming buy tx`);
+      logger.info(
+        { mint: accountData.baseMint, signature },
+        `Error confirming buy tx`,
+      );
     }
   } catch (e) {
     logger.debug(e);
@@ -322,7 +403,12 @@ async function buy(accountId: PublicKey, accountData: LiquidityStateV4): Promise
   }
 }
 
-async function sell(accountId: PublicKey, mint: PublicKey, amount: BigNumberish, value: number): Promise<boolean> {
+async function sell(
+  accountId: PublicKey,
+  mint: PublicKey,
+  amount: BigNumberish,
+  value: number,
+): Promise<boolean> {
   let retries = 0;
 
   do {
@@ -333,7 +419,7 @@ async function sell(accountId: PublicKey, mint: PublicKey, amount: BigNumberish,
       }
 
       if (!tokenAccount.poolKeys) {
-        logger.warn({ mint }, 'No pool keys found');
+        logger.warn({ mint }, "No pool keys found");
         continue;
       }
 
@@ -377,15 +463,22 @@ async function sell(accountId: PublicKey, mint: PublicKey, amount: BigNumberish,
           ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 400000 }),
           ComputeBudgetProgram.setComputeUnitLimit({ units: 200000 }),
           ...innerTransaction.instructions,
-          createCloseAccountInstruction(tokenAccount.address, wallet.publicKey, wallet.publicKey),
+          createCloseAccountInstruction(
+            tokenAccount.address,
+            wallet.publicKey,
+            wallet.publicKey,
+          ),
         ],
       }).compileToV0Message();
-      
+
       const transaction = new VersionedTransaction(messageV0);
       transaction.sign([wallet, ...innerTransaction.signers]);
-      const signature = await solanaConnection.sendRawTransaction(transaction.serialize(), {
-        preflightCommitment: commitment,
-      });
+      const signature = await solanaConnection.sendRawTransaction(
+        transaction.serialize(),
+        {
+          preflightCommitment: commitment,
+        },
+      );
       logger.info({ mint, signature }, `Sent sell tx`);
       const confirmation = await solanaConnection.confirmTransaction(
         {
@@ -414,7 +507,10 @@ async function sell(accountId: PublicKey, mint: PublicKey, amount: BigNumberish,
     } catch (e: any) {
       retries++;
       logger.debug(e);
-      logger.error({ mint }, `Failed to sell token, retry: ${retries}/${MAX_SELL_RETRIES}`);
+      logger.error(
+        { mint },
+        `Failed to sell token, retry: ${retries}/${MAX_SELL_RETRIES}`,
+      );
     }
   } while (retries < MAX_SELL_RETRIES);
   return true;
@@ -442,9 +538,9 @@ function loadSnipeList() {
   }
 
   const count = snipeList.length;
-  const data = fs.readFileSync(path.join(__dirname, 'snipe-list.txt'), 'utf-8');
+  const data = fs.readFileSync(path.join(__dirname, "snipe-list.txt"), "utf-8");
   snipeList = data
-    .split('\n')
+    .split("\n")
     .map((a) => a.trim())
     .filter((a) => a);
 
@@ -458,108 +554,141 @@ function shouldBuy(key: string): boolean {
 }
 
 const runListener = async () => {
-  await init();
-  const runTimestamp = Math.floor(new Date().getTime() / 1000);
-  const raydiumSubscriptionId = solanaConnection.onProgramAccountChange(
-    RAYDIUM_LIQUIDITY_PROGRAM_ID_V4,
-    async (updatedAccountInfo) => {
-      const key = updatedAccountInfo.accountId.toString();
-      const poolState = LIQUIDITY_STATE_LAYOUT_V4.decode(updatedAccountInfo.accountInfo.data);
-      const poolOpenTime = parseInt(poolState.poolOpenTime.toString());
-      const existing = existingLiquidityPools.has(key);
-
-      if (poolOpenTime > runTimestamp && !existing) {
-        existingLiquidityPools.add(key);
-        const _ = processRaydiumPool(updatedAccountInfo.accountId, poolState);
-      }
-    },
-    commitment,
-    [
-      { dataSize: LIQUIDITY_STATE_LAYOUT_V4.span },
-      {
-        memcmp: {
-          offset: LIQUIDITY_STATE_LAYOUT_V4.offsetOf('quoteMint'),
-          bytes: quoteToken.mint.toBase58(),
-        },
-      },
-      {
-        memcmp: {
-          offset: LIQUIDITY_STATE_LAYOUT_V4.offsetOf('marketProgramId'),
-          bytes: OPENBOOK_PROGRAM_ID.toBase58(),
-        },
-      },
-      {
-        memcmp: {
-          offset: LIQUIDITY_STATE_LAYOUT_V4.offsetOf('status'),
-          bytes: bs58.encode([6, 0, 0, 0, 0, 0, 0, 0]),
-        },
-      },
-    ],
-  );
-
-  const openBookSubscriptionId = solanaConnection.onProgramAccountChange(
-    OPENBOOK_PROGRAM_ID,
-    async (updatedAccountInfo) => {
-      const key = updatedAccountInfo.accountId.toString();
-      const existing = existingOpenBookMarkets.has(key);
-      if (!existing) {
-        existingOpenBookMarkets.add(key);
-        const _ = processOpenBookMarket(updatedAccountInfo);
-      }
-    },
-    commitment,
-    [
-      { dataSize: MARKET_STATE_LAYOUT_V3.span },
-      {
-        memcmp: {
-          offset: MARKET_STATE_LAYOUT_V3.offsetOf('quoteMint'),
-          bytes: quoteToken.mint.toBase58(),
-        },
-      },
-    ],
-  );
-
-  if (AUTO_SELL) {
-    const walletSubscriptionId = solanaConnection.onProgramAccountChange(
-      TOKEN_PROGRAM_ID,
+  try {
+    await init();
+    const runTimestamp = Math.floor(new Date().getTime() / 1000);
+    const raydiumSubscriptionId = solanaConnection.onProgramAccountChange(
+      RAYDIUM_LIQUIDITY_PROGRAM_ID_V4,
       async (updatedAccountInfo) => {
-        const accountData = AccountLayout.decode(updatedAccountInfo.accountInfo!.data);
-        if (updatedAccountInfo.accountId.equals(quoteTokenAssociatedAddress)) {
-          return;
-        }
-        let completed = false;
-        while (!completed) {
-          setTimeout(() => {}, 1000);
-          const currValue = await retrieveTokenValueByAddress(accountData.mint.toBase58());
-          if (currValue) {
-            logger.info(accountData.mint, `Current Price: ${currValue} SOL`);
-            completed = await sell(updatedAccountInfo.accountId, accountData.mint, accountData.amount, currValue);
-          } 
+        const key = updatedAccountInfo.accountId.toString();
+        const poolState = LIQUIDITY_STATE_LAYOUT_V4.decode(
+          updatedAccountInfo.accountInfo.data,
+        );
+        const poolOpenTime = parseInt(poolState.poolOpenTime.toString());
+        const existing = existingLiquidityPools.has(key);
+
+        if (poolOpenTime > runTimestamp && !existing) {
+          existingLiquidityPools.add(key);
+          const _ = processRaydiumPool(updatedAccountInfo.accountId, poolState);
         }
       },
       commitment,
       [
+        { dataSize: LIQUIDITY_STATE_LAYOUT_V4.span },
         {
-          dataSize: 165,
+          memcmp: {
+            offset: LIQUIDITY_STATE_LAYOUT_V4.offsetOf("quoteMint"),
+            bytes: quoteToken.mint.toBase58(),
+          },
         },
         {
           memcmp: {
-            offset: 32,
-            bytes: wallet.publicKey.toBase58(),
+            offset: LIQUIDITY_STATE_LAYOUT_V4.offsetOf("marketProgramId"),
+            bytes: OPENBOOK_PROGRAM_ID.toBase58(),
+          },
+        },
+        {
+          memcmp: {
+            offset: LIQUIDITY_STATE_LAYOUT_V4.offsetOf("status"),
+            bytes: bs58.encode([6, 0, 0, 0, 0, 0, 0, 0]),
           },
         },
       ],
     );
 
-    logger.info(`Listening for wallet changes: ${walletSubscriptionId}`);
-  }
+    const openBookSubscriptionId = solanaConnection.onProgramAccountChange(
+      OPENBOOK_PROGRAM_ID,
+      async (updatedAccountInfo) => {
+        const key = updatedAccountInfo.accountId.toString();
+        const existing = existingOpenBookMarkets.has(key);
+        if (!existing) {
+          existingOpenBookMarkets.add(key);
+          const _ = processOpenBookMarket(updatedAccountInfo);
+        }
+      },
+      commitment,
+      [
+        { dataSize: MARKET_STATE_LAYOUT_V3.span },
+        {
+          memcmp: {
+            offset: MARKET_STATE_LAYOUT_V3.offsetOf("quoteMint"),
+            bytes: quoteToken.mint.toBase58(),
+          },
+        },
+      ],
+    );
 
-  logger.info(`Listening for raydium changes: ${raydiumSubscriptionId}`);
-  logger.info(`Listening for open book changes: ${openBookSubscriptionId}`);
+    if (AUTO_SELL) {
+      const walletSubscriptionId = solanaConnection.onProgramAccountChange(
+        TOKEN_PROGRAM_ID,
+        async (updatedAccountInfo) => {
+          const accountData = AccountLayout.decode(
+            updatedAccountInfo.accountInfo!.data,
+          );
+          if (
+            updatedAccountInfo.accountId.equals(quoteTokenAssociatedAddress)
+          ) {
+            return;
+          }
+          let completed = false;
+          while (!completed) {
+            setTimeout(() => {}, 1000);
+            const currValue = await retrieveTokenValueByAddress(
+              accountData.mint.toBase58(),
+            );
+            if (currValue) {
+              logger.info(accountData.mint, `Current Price: ${currValue} SOL`);
+              completed = await sell(
+                updatedAccountInfo.accountId,
+                accountData.mint,
+                accountData.amount,
+                currValue,
+              );
+            }
+          }
+        },
+        commitment,
+        [
+          {
+            dataSize: 165,
+          },
+          {
+            memcmp: {
+              offset: 32,
+              bytes: wallet.publicKey.toBase58(),
+            },
+          },
+        ],
+      );
 
-  if (USE_SNIPE_LIST) {
-    setInterval(loadSnipeList, SNIPE_LIST_REFRESH_INTERVAL);
+      logger.info(`Listening for wallet changes: ${walletSubscriptionId}`);
+    }
+
+    logger.info(`Listening for raydium changes: ${raydiumSubscriptionId}`);
+    logger.info(`Listening for open book changes: ${openBookSubscriptionId}`);
+
+    if (USE_SNIPE_LIST) {
+      setInterval(loadSnipeList, SNIPE_LIST_REFRESH_INTERVAL);
+    }
+  } catch (error) {
+    console.error("Error during runListener execution:", error);
+    process.exit(1); // Exit with error code
   }
 };
 
-runListener();
+// runListener();
+// Wrap the call to runListener to catch any top-level errors
+(async () => {
+  try {
+    // console.log("Calling runListener()..."); // Can remove this
+    await runListener();
+    // console.log("runListener() completed or still running if listeners are active."); // Can remove this
+  } catch (error) {
+    // Ensure pino logger is used here if it's restored, or keep console.error
+    (logger || console).error(
+      "Unhandled error in top-level runListener call:",
+      error,
+    );
+    process.exit(1); // Exit with error code
+  }
+})();

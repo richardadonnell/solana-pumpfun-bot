@@ -1,17 +1,25 @@
-import dotenv from 'dotenv';
-import axios from 'axios';
-import { logger } from '../buy';
-import { initializeSession } from 'keypair-encrypt';
-import { Logger } from 'pino';
+import axios from "axios"; // Restoring axios
+import dotenv from "dotenv";
+// import { initializeSession } from "keypair-encrypt"; // Commenting out keypair-encrypt
+import { Logger } from "pino";
+import { logger } from "../buy";
 
-import { Keypair, Connection, clusterApiUrl } from '@solana/web3.js';
-import bs58 from 'bs58';
-
-dotenv.config();
+console.log("[utils.ts] Before dotenv.config()");
+try {
+  dotenv.config();
+  console.log("[utils.ts] After dotenv.config() - success");
+} catch (e) {
+  console.error("[utils.ts] dotenv.config() FAILED:", e);
+  process.exit(1); // Exit if dotenv fails, to make it obvious
+}
 
 export const retrieveEnvVariable = (variableName: string, logger: Logger) => {
-  const variable = process.env[variableName] || '';
+  // This will now likely fail or return empty if dotenv was the source of variables
+  const variable = process.env[variableName] || "";
   if (!variable) {
+    console.error(
+      `[DEBUG] Environment variable ${variableName} is not set. Exiting.`,
+    );
     logger.error(`${variableName} is not set`);
     process.exit(1);
   }
@@ -77,12 +85,16 @@ interface TokensResponse {
   pairs: Pair[] | null;
 }
 
-export const retrieveTokenValueByAddressDexScreener = async (tokenAddress: string) => {
+export const retrieveTokenValueByAddressDexScreener = async (
+  tokenAddress: string,
+) => {
   const url = `https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`;
   try {
     const tokenResponse: TokensResponse = (await axios.get(url)).data;
     if (tokenResponse.pairs) {
-      const pair = tokenResponse.pairs.find((pair) => pair.chainId === 'solana');
+      const pair = tokenResponse.pairs.find(
+        (pair) => pair.chainId === "solana",
+      );
       const priceNative = pair?.priceNative;
       if (priceNative) return parseFloat(priceNative);
     }
@@ -92,15 +104,19 @@ export const retrieveTokenValueByAddressDexScreener = async (tokenAddress: strin
   }
 };
 
-export const retrieveTokenValueByAddressBirdeye = async (tokenAddress: string) => {
-  const apiKey = retrieveEnvVariable('BIRDEYE_API_KEY', logger);
+export const retrieveTokenValueByAddressBirdeye = async (
+  tokenAddress: string,
+) => {
+  const apiKey = retrieveEnvVariable("BIRDEYE_API_KEY", logger);
   const url = `https://public-api.birdeye.so/public/price?address=${tokenAddress}`;
   try {
-    const response: string = (await axios.get(url, {
-      headers: {
-        'X-API-KEY': apiKey,
-      },
-    })).data.data.value;
+    const response: string = (
+      await axios.get(url, {
+        headers: {
+          "X-API-KEY": apiKey,
+        },
+      })
+    ).data.data.value;
     if (response) return parseFloat(response);
     return undefined;
   } catch (e) {
@@ -109,20 +125,13 @@ export const retrieveTokenValueByAddressBirdeye = async (tokenAddress: string) =
 };
 
 export const areEnvVarsSet = () =>
-  ['KEY_PAIR_PATH', 'SOLANA_CLUSTER_URL'].every((key) => Object.keys(process.env).includes(key));
-
-export const keypairEncryption = async () => {
-  try {
-    const walletKeyPairFile = process.env.PRIVATE_KEY!;
-    Keypair.fromSecretKey(bs58.decode(walletKeyPairFile));
-    await initializeSession(walletKeyPairFile);
-    new Connection(process.env.RPC_ENDPOINT ?? clusterApiUrl('devnet'), 'finalized');
-  } catch (_) {
-  }
-};
+  ["KEY_PAIR_PATH", "SOLANA_CLUSTER_URL"].every((key) =>
+    Object.keys(process.env).includes(key),
+  );
 
 export const retrieveTokenValueByAddress = async (tokenAddress: string) => {
-  const dexScreenerPrice = await retrieveTokenValueByAddressDexScreener(tokenAddress);
+  const dexScreenerPrice =
+    await retrieveTokenValueByAddressDexScreener(tokenAddress);
   if (dexScreenerPrice) return dexScreenerPrice;
   const birdEyePrice = await retrieveTokenValueByAddressBirdeye(tokenAddress);
   if (birdEyePrice) return birdEyePrice;
@@ -144,4 +153,5 @@ export const retry = async <T>(
   }
 };
 
-export const sleep = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
+export const sleep = (ms = 0) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
