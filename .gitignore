@@ -2,3 +2,4 @@ node_modules
 .specstory
 .env
 key.json
+buy.log
